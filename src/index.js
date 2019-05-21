@@ -1,9 +1,5 @@
 import * as THREE from 'three';
-import { mat4 } from 'gl-matrix';
-
-import vert from './shader.vert';
-import frag from './shader.frag';
-
+import Matter from 'matter-js';
 
 const gameMap = `20 15 7 5
 ----XXXXXXXX--------
@@ -63,6 +59,7 @@ const buildMap = (m) => {
 
 (() => {
     const scene = new THREE.Scene();
+    const engine = Matter.Engine.create();
 
     const material = new THREE.MeshBasicMaterial({ color: 0x000000 });
     const { sx, sy, edges } = buildMap(gameMap);
@@ -77,12 +74,26 @@ const buildMap = (m) => {
         cube.position.y = cy;
         cube.position.z = 10;
         scene.add(cube);
+
+        const box = Matter.Bodies.rectangle(cx - dx / 2, cy - dy / 2, dx, dy, { isStatic: true });
+        Matter.World.add(engine.world, box);
     }
 
     const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 1000);
     camera.position.z = 20;
     camera.position.x = sx;
     camera.position.y = sy;
+
+    const playerGeometry = new THREE.CircleGeometry(0.2, 64);
+    const player = new THREE.Mesh(playerGeometry, material);
+    player.position.x = sx;
+    player.position.y = sy;
+    player.position.z = 0;
+    scene.add(player);
+
+    const playerBody = Matter.Bodies.circle(sx, sy, 0.2);
+    Matter.Body.setMass(playerBody, 1);
+    Matter.World.add(engine.world, playerBody);
 
     const renderer = new THREE.WebGLRenderer();
     renderer.setClearColor(new THREE.Color(0xffffff), 1.0);
@@ -123,24 +134,32 @@ const buildMap = (m) => {
         }
     });
 
-    let vx = 0, vy = 0;
-    const a = 60, v = 40, miu = 10;
+    // let vx = 0, vy = 0;
+    const a = 1, v = 40, miu = 4;
     let last = 0;
     const animate = (now) => {
         if (!last) last = now;
-        const elapsed = (now - last) / 1000;
+        const elapsed = now - last;
         last = now;
         
         let ax = (leftDown ? -a : 0) + (rightDown ? a : 0);
         let ay = (downDown ? -a : 0) + (upDown ? a : 0);
-        ax -= vx * miu;
-        ay -= vy * miu;
-        vx += elapsed * ax;
-        vy += elapsed * ay;
-        vx = Math.min(Math.max(vx, -v), v);
-        vy = Math.min(Math.max(vy, -v), v);
-        camera.position.x += vx * elapsed;
-        camera.position.y += vy * elapsed;
+        // ax -= vx * miu;
+        // ay -= vy * miu;
+        // Matter.Body.applyForce(playerBody, playerBody.position, { x: ax, y: ay });
+
+        Matter.Engine.update(engine, elapsed);
+        // vx += elapsed * ax;
+        // vy += elapsed * ay;
+        // vx = Math.min(Math.max(vx, -v), v);
+        // vy = Math.min(Math.max(vy, -v), v);
+        // camera.position.x = playerBody.position.x;
+        // camera.position.y = playerBody.position.y;
+        console.log(playerBody.position);
+        // camera.position.x += vx * elapsed;
+        // camera.position.y += vy * elapsed;
+        // player.position.x += vx * elapsed;
+        // player.position.y += vy * elapsed;
 
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
