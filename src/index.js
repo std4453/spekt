@@ -21,38 +21,10 @@ XXXXX------X---XXXXX
 const buildMap = (m) => {
     const [header, ...lines] = m.split('\n');
     const [width, height, sx, sy] = header.split(' ').map(s => parseInt(s));
-    const edges = [];
-    for (let y = 0; y <= height; ++y) {
-        let begin = -1;
-        for (let x = 0; x < width; ++x) {
-            const above = y > 0 && lines[y - 1][x] === 'X';
-            const under = y < height && lines[y][x] === 'X';
-            if (above ^ under) {
-                if (begin < 0) begin = x;
-            } else {
-                if (begin >= 0) {
-                    edges.push([begin, height - y, x, height - y]);
-                    begin = -1;
-                }
-            }
-        }
-        if (begin >= 0) edges.push([begin, height - y, width, height - y]);
-    }
-    for (let x = 0; x <= width; ++x) {
-        let begin = -1;
-        for (let y = 0; y < height; ++y) {
-            const left = x > 0 && lines[y][x - 1] === 'X';
-            const right = x < width && lines[y][x] === 'X';
-            if (left ^ right) {
-                if (begin < 0) begin = y;
-            } else {
-                if (begin >= 0) {
-                    edges.push([x, height - begin, x, height - y]);
-                    begin = -1;
-                }
-            }
-        }
-        if (begin >= 0) edges.push([x, height - begin, x, height - height]);
+
+    const walls = [];
+    for (let y = 0; y < height; ++y) for (let x = 0; x < width; ++x) {
+        if (lines[y][x] === 'X') walls.push([x, height - 1 - y, x + 1, height - y]);
     }
 
     const tiles = [], queue = [[sx, sy]], visited = new Array(height);
@@ -71,7 +43,7 @@ const buildMap = (m) => {
         });
     }
 
-    return { width, height, sx, sy: height - sy, edges, tiles };
+    return { width, height, sx, sy: height - sy, walls, tiles };
 }
 
 (() => {
@@ -85,25 +57,22 @@ const buildMap = (m) => {
         blendEquation: THREE.MinEquation,
         transparent: true,
     });
-    const { sx, sy, edges, tiles } = buildMap(gameMap);
-    for (const [x1, y1, x2, y2] of edges) {
-        const dx = Math.abs(x1 - x2) + 0.1;
-        const dy = Math.abs(y1 - y2) + 0.1;
-        const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
-        const geometry = new THREE.BoxGeometry(dx, dy, 20);
+    const { sx, sy, walls, tiles } = buildMap(gameMap);
+    for (const [x1, y1, x2, y2] of walls) {
+        const geometry = new THREE.BoxGeometry(x2 - x1, y2 - y1, 20);
         const cube = new THREE.Mesh(geometry, wallMat);
-        cube.position.x = cx;
-        cube.position.y = cy;
+        cube.position.x = (x1 + x2) / 2;
+        cube.position.y = (y1 + y2) / 2;
         cube.position.z = 10;
         scene.add(cube);
 
         const box = Matter.Bodies.rectangle(
-            cx * 1000, -cy * 1000,
-            dx * 1000, dy * 1000, { isStatic: true });
+            (x1 + x2) / 2 * 1000, -(y1 + y2) / 2 * 1000,
+            (x2 - x1) * 1000, -(y2 - y1) * 1000, { isStatic: true });
         Matter.World.add(engine.world, box);
     }
 
-    const tileMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+    const tileMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     for (const [x1, y1, x2, y2] of tiles) {
         const geometry = new THREE.PlaneGeometry(x2 - x1, y2 - y1);
         const tile = new THREE.Mesh(geometry, tileMat);
@@ -183,11 +152,13 @@ const buildMap = (m) => {
             });
 
         Matter.Engine.update(engine, 1000 / 60);
-        camera.position.x = playerBody.position.x / 1000;
-        camera.position.y = -playerBody.position.y / 1000;
-        player.position.x = playerBody.position.x / 1000;
-        player.position.y = -playerBody.position.y / 1000;
+        const px = playerBody.position.x / 1000, py = -playerBody.position.y / 1000;
+        camera.position.x = px;
+        camera.position.y = py;
+        player.position.x = px;
+        player.position.y = py;
 
+        renderer.setViewport((px - sx) * 30, (py - sy) * 30, window.innerWidth, window.innerHeight);
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
     };
