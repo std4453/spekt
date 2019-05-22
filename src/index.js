@@ -82,7 +82,7 @@ const buildMap = (m) => {
     }
 
     const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 1000);
-    camera.position.z = 20;
+    camera.position.z = 5;
     camera.position.x = sx;
     camera.position.y = sy;
 
@@ -100,7 +100,7 @@ const buildMap = (m) => {
     Matter.World.add(engine.world, playerBody);
 
     const renderer = new THREE.WebGLRenderer();
-    // renderer.setClearColor(new THREE.Color(0xffffff), 1.0);
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
@@ -158,7 +158,13 @@ const buildMap = (m) => {
         player.position.x = px;
         player.position.y = py;
 
-        renderer.setViewport((px - sx) * 30, (py - sy) * 30, window.innerWidth, window.innerHeight);
+        const ratio = window.innerHeight / (Math.tan(70 / 2 / 180 * Math.PI) * 20 * 2);
+        // console.log(ratio);
+        // camera.setViewOffset(
+        //     window.innerWidth, window.innerHeight,
+        //     -ratio * (px - sx), ratio * (py - sy),
+        //     window.innerWidth, window.innerHeight);
+        // renderer.setViewport((px - sx) * 30, (py - sy) * 30, window.innerWidth, window.innerHeight);
         renderer.render(scene, camera);
         requestAnimationFrame(animate);
     };
