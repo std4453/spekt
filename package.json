@@ -18,6 +18,8 @@
   "dependencies": {
     "gl-matrix": "^3.0.0",
     "matter-js": "^0.14.2",
+    "postprocessing": "^6.4.0",
+    "rot-js": "^2.0.3",
     "three": "^0.104.0"
   }
 }
